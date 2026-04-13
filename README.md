@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FLMAN-CN
 
-## Getting Started
+企业内部销售业务管理系统（Web）。
 
-First, run the development server:
+## 1. 项目目录结构
+
+```text
+flman-cn/
+├─ app/
+│  ├─ (auth)/login
+│  ├─ (dashboard)/dashboard
+│  │  ├─ customers
+│  │  ├─ quotes
+│  │  ├─ order-stats
+│  │  ├─ revenue
+│  │  ├─ finance
+│  │  ├─ meetings
+│  │  └─ supervision
+│  ├─ actions/
+│  └─ api/auth/[...nextauth]/
+├─ components/
+│  ├─ layout/
+│  └─ ui/
+├─ lib/
+├─ prisma/
+│  ├─ schema.prisma
+│  └─ seed.ts
+├─ docs/ARCHITECTURE.md
+└─ .env.example
+```
+
+## 2. 本地开发运行
+
+1. 准备 PostgreSQL 数据库并创建库，例如 `flman_cn`
+2. 复制环境变量：
+
+```bash
+cp .env.example .env
+```
+
+3. 执行 Prisma：
+
+```bash
+npm run prisma:generate
+npm run prisma:push
+npm run db:seed
+```
+
+4. 启动开发服务：
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+访问：`http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 3. 演示账号（seed）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `admin@flman.cn / 123456`
+- `manager@flman.cn / 123456`
+- `sales1@flman.cn / 123456`
+- `sales2@flman.cn / 123456`
+- `finance@flman.cn / 123456`
 
-## Learn More
+## 4. 关键能力
 
-To learn more about Next.js, take a look at the following resources:
+- 多账号登录（NextAuth）
+- 角色化首页（销售 / 财务 / 管理）
+- RBAC 模块权限 + 数据范围隔离
+- 客户中心、报价版本、单量监控、收入统计、财务中心、会议记录、监督打卡
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 5. 数据模型核心实体
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- User / Role
+- Customer / FollowUp / MeetingRecord
+- Quote / QuoteAttachment
+- CustomerOrderStat
+- Reimbursement
+- AttendanceRecord
 
-## Deploy on Vercel
+详见：`prisma/schema.prisma`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 6. 后续扩展方向
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 接入 Supabase（PostgreSQL + Storage）
+- 审计日志（操作轨迹）
+- API 版本化（`/api/v1`）
+- 多租户或分公司隔离（如后续需要）
+
+## 7. 线上部署（GitHub + Vercel + Supabase）
+
+### 7.1 Supabase 准备
+
+1. 在 Supabase 创建项目
+2. 获取两个连接串：
+   - `DATABASE_URL`（Pooler，端口通常 6543）
+   - `DIRECT_URL`（Direct，端口通常 5432）
+3. 在本地创建生产环境文件：
+
+```bash
+cp .env.production.example .env.production
+```
+
+并填入真实值。
+
+### 7.2 GitHub 推送
+
+```bash
+git add .
+git commit -m "chore: prepare production deployment with Vercel and Supabase"
+git remote add origin <your-github-repo-url>
+git push -u origin main
+```
+
+### 7.3 初始化 Supabase 数据库结构与种子
+
+```bash
+export $(grep -v '^#' .env.production | xargs)
+npx prisma generate
+npx prisma db push
+npm run db:seed
+```
+
+### 7.4 Vercel 部署
+
+在 Vercel 导入 GitHub 仓库后，配置环境变量：
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`（线上域名）
+
+并重新部署。
+
+部署后每次 `git push` 到默认分支会自动触发 Vercel 重新部署。

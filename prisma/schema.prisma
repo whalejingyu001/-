@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  SALES
+  SALES_MANAGER
+  FINANCE
+  ADMIN
+}
+
+enum CustomerPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CustomerStage {
+  NEW
+  CONTACTED
+  FOLLOWING
+  WON
+}
+
+enum FollowUpStatus {
+  PENDING
+  DONE
+  OVERDUE
+}
+
+enum MeetingSourceType {
+  REALTIME_AUDIO
+  AUDIO_UPLOAD
+  VIDEO_UPLOAD
+}
+
+enum ReimbursementStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  WORKING
+  CHECKED_OUT
+  BLOCKED
+}
+
+enum AttendanceType {
+  CLOCK_IN
+  CLOCK_OUT
+  FIELD_WORK
+}
+
+enum AttendanceQrStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      RoleName @unique
+  label     String
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id              String             @id @default(cuid())
+  email           String             @unique
+  name            String
+  passwordHash    String
+  teamName        String?
+  status          UserStatus         @default(ACTIVE)
+  roleId          String
+  role            Role               @relation(fields: [roleId], references: [id])
+  supervisorId    String?
+  supervisor      User?              @relation("UserSupervisor", fields: [supervisorId], references: [id])
+  subordinates    User[]             @relation("UserSupervisor")
+  customers       Customer[]         @relation("CustomerOwner")
+  createdCustomers Customer[]        @relation("CustomerCreator")
+  followUps       FollowUp[]
+  meetings        MeetingRecord[]
+  quotes          Quote[]            @relation("QuoteCreator")
+  reimbursements  Reimbursement[]    @relation("ReimbursementApplicant")
+  reviewedReimbursements Reimbursement[] @relation("ReimbursementReviewer")
+  attendanceRecords AttendanceRecord[]
+  attendanceQrTokens AttendanceQrToken[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([status])
+}
+
+model Customer {
+  id               String              @id @default(cuid())
+  name             String
+  companyName      String?
+  title            String?
+  contactName      String?
+  phone            String?
+  wechat           String?
+  email            String?
+  company          String?
+  ownerId          String
+  owner            User                @relation("CustomerOwner", fields: [ownerId], references: [id])
+  createdById      String
+  createdBy        User                @relation("CustomerCreator", fields: [createdById], references: [id])
+  priority         CustomerPriority    @default(MEDIUM)
+  businessNeeds    String              @default("")
+  notes            String?
+  tags             String             @default("")
+  stage            CustomerStage       @default(NEW)
+  nextFollowUpAt   DateTime?
+  unitProfit       Decimal
+  followUps        FollowUp[]
+  meetings         MeetingRecord[]
+  quotes           Quote[]
+  orderStats       CustomerOrderStat[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([ownerId])
+  @@index([stage])
+}
+
+model FollowUp {
+  id           String         @id @default(cuid())
+  customerId   String
+  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User           @relation(fields: [userId], references: [id])
+  content      String
+  dueAt        DateTime?
+  status       FollowUpStatus @default(PENDING)
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+
+  @@index([customerId, status])
+}
+
+model MeetingRecord {
+  id          String            @id @default(cuid())
+  customerId  String?
+  customer    Customer?         @relation(fields: [customerId], references: [id])
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  title       String
+  sourceType  MeetingSourceType
+  sourceUrl   String?
+  transcript  String
+  aiSummary   String
+  createdAt   DateTime          @default(now())
+
+  @@index([customerId])
+}
+
+model Quote {
+  id            String            @id @default(cuid())
+  customerId    String
+  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdById   String
+  createdBy     User              @relation("QuoteCreator", fields: [createdById], references: [id])
+  quoteDate     DateTime          @default(now())
+  version       Int
+  isLatest      Boolean           @default(true)
+  operationFee  Decimal
+  finalMileFee  Decimal           @default(0)
+  shippingFee   Decimal
+  totalAmount   Decimal
+  notes         String?
+  attachments   QuoteAttachment[]
+  createdAt     DateTime          @default(now())
+
+  @@unique([customerId, version])
+  @@index([customerId, isLatest])
+}
+
+model QuoteAttachment {
+  id        String   @id @default(cuid())
+  quoteId   String
+  quote     Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  createdAt DateTime @default(now())
+}
+
+model CustomerOrderStat {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  statDate    DateTime
+  orderCount  Int
+  createdAt   DateTime @default(now())
+
+  @@unique([customerId, statDate])
+  @@index([statDate])
+}
+
+model Reimbursement {
+  id          String              @id @default(cuid())
+  applicantId String
+  applicant   User                @relation("ReimbursementApplicant", fields: [applicantId], references: [id])
+  amount      Decimal
+  reason      String
+  status      ReimbursementStatus @default(PENDING)
+  reviewerId  String?
+  reviewer    User?               @relation("ReimbursementReviewer", fields: [reviewerId], references: [id])
+  reviewNote  String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model AttendanceRecord {
+  id          String           @id @default(cuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id])
+  attendanceDate DateTime
+  type         AttendanceType   @default(CLOCK_IN)
+  checkInAt    DateTime?
+  checkOutAt   DateTime?
+  status       AttendanceStatus @default(WORKING)
+  note         String?
+  latitude     Float?
+  longitude    Float?
+  accuracy     Float?
+  address      String?
+  checkedAt    DateTime?
+  qrToken      String?
+  tokenExpiredAt DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@unique([userId, attendanceDate, type])
+  @@index([userId, checkedAt])
+}
+
+model AttendanceQrToken {
+  id          String           @id @default(cuid())
+  token       String           @unique
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose     String           @default("attendance")
+  status      AttendanceQrStatus @default(PENDING)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId, status, expiresAt])
+}
