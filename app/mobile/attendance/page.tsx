@@ -6,6 +6,7 @@ export default async function MobileAttendancePage({
 }: {
   searchParams: Promise<{ token?: string }>;
 }) {
+  const now = new Date();
   const { token } = await searchParams;
   const tokenValue = token ?? "";
 
@@ -26,10 +27,9 @@ export default async function MobileAttendancePage({
     return <div className="p-6 text-sm text-rose-600">该打卡二维码已失效或已使用。</div>;
   }
 
-  if (tokenRecord.expiresAt.getTime() < Date.now()) {
+  if (tokenRecord.expiresAt < now) {
     return <div className="p-6 text-sm text-rose-600">该打卡二维码已过期，请返回电脑端刷新。</div>;
   }
 
   return <MobileAttendanceForm token={tokenValue} userName={tokenRecord.user.name} userEmail={tokenRecord.user.email} />;
 }
-
