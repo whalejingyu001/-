@@ -290,8 +290,6 @@ model AttendanceRecord {
   longitude    Float?
   accuracy     Float?
   address      String?
-  images       String           @default("")
-  remark       String?
   checkedAt    DateTime?
   qrToken      String?
   tokenExpiredAt DateTime?

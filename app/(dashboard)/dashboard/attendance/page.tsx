@@ -10,13 +10,18 @@ type SearchParams = {
   date?: string;
 };
 
-function parseImages(value?: string | null) {
-  if (!value) return [] as string[];
+function parseFieldWorkProof(value?: string | null) {
+  const fallback = { remark: "-", images: [] as string[] };
+  if (!value) return fallback;
   try {
-    const parsed = JSON.parse(value) as string[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(value) as { kind?: string; remark?: string; images?: string[] };
+    if (parsed.kind !== "FIELD_WORK_PROOF") return fallback;
+    return {
+      remark: parsed.remark?.trim() || "-",
+      images: Array.isArray(parsed.images) ? parsed.images : [],
+    };
   } catch {
-    return [];
+    return fallback;
   }
 }
 
@@ -102,7 +107,7 @@ export default async function AttendanceDashboardPage({
             <tbody className="divide-y divide-slate-100">
               {records.map((item) => {
                 const time = item.checkedAt ?? item.checkInAt ?? item.checkOutAt ?? item.createdAt;
-                const images = parseImages(item.images);
+                const proof = parseFieldWorkProof(item.note);
                 return (
                   <tr key={item.id}>
                     <td className="px-4 py-3">{item.user.name}</td>
@@ -110,11 +115,11 @@ export default async function AttendanceDashboardPage({
                     <td className="px-4 py-3">{time.toLocaleString("zh-CN")}</td>
                     <td className="px-4 py-3">{item.address ?? "-"}</td>
                     <td className="px-4 py-3">{ATTENDANCE_STATUS_LABELS[item.status]}</td>
-                    <td className="px-4 py-3">{item.remark ?? "-"}</td>
+                    <td className="px-4 py-3">{proof.remark}</td>
                     <td className="px-4 py-3">
-                      {images.length > 0 ? (
+                      {proof.images.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
-                          {images.slice(0, 3).map((src, index) => (
+                          {proof.images.slice(0, 3).map((src, index) => (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img key={`${item.id}-${index}`} src={src} alt="外勤现场" className="h-10 w-10 rounded border border-slate-200 object-cover" />
                           ))}
@@ -218,18 +223,18 @@ export default async function AttendanceDashboardPage({
           <tbody className="divide-y divide-slate-100">
             {myRecords.map((item) => {
               const time = item.checkedAt ?? item.checkInAt ?? item.checkOutAt ?? item.createdAt;
-              const images = parseImages(item.images);
+              const proof = parseFieldWorkProof(item.note);
               return (
                 <tr key={item.id}>
                   <td className="px-4 py-3">{ATTENDANCE_TYPE_LABELS[item.type]}</td>
                   <td className="px-4 py-3">{time.toLocaleString("zh-CN")}</td>
                   <td className="px-4 py-3">{item.address ?? "-"}</td>
                   <td className="px-4 py-3">{ATTENDANCE_STATUS_LABELS[item.status]}</td>
-                  <td className="px-4 py-3">{item.remark ?? "-"}</td>
+                  <td className="px-4 py-3">{proof.remark}</td>
                   <td className="px-4 py-3">
-                    {images.length > 0 ? (
+                    {proof.images.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {images.slice(0, 3).map((src, index) => (
+                        {proof.images.slice(0, 3).map((src, index) => (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img key={`${item.id}-${index}`} src={src} alt="外勤现场" className="h-10 w-10 rounded border border-slate-200 object-cover" />
                         ))}

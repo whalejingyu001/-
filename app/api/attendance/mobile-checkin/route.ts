@@ -86,8 +86,14 @@ export async function POST(request: Request) {
     }
   }
 
-  const imagesJson = type === "FIELD_WORK" ? JSON.stringify(images ?? []) : "";
-  const remarkText = type === "FIELD_WORK" ? remark?.trim() ?? null : null;
+  const fieldWorkNote =
+    type === "FIELD_WORK"
+      ? JSON.stringify({
+          kind: "FIELD_WORK_PROOF",
+          remark: remark?.trim() ?? "",
+          images: images ?? [],
+        })
+      : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.attendanceRecord.upsert({
@@ -104,14 +110,12 @@ export async function POST(request: Request) {
         longitude,
         accuracy: accuracy ?? null,
         address: address ?? null,
-        images: imagesJson,
-        remark: remarkText,
         qrToken: tokenRecord.token,
         tokenExpiredAt: tokenRecord.expiresAt,
         checkInAt: type === "CLOCK_IN" ? checkedAt : undefined,
         checkOutAt: type === "CLOCK_OUT" ? checkedAt : undefined,
         status: type === "CLOCK_OUT" ? "CHECKED_OUT" : "WORKING",
-        note: type === "FIELD_WORK" ? "外勤打卡" : undefined,
+        note: fieldWorkNote ?? undefined,
       },
       create: {
         userId: tokenRecord.userId,
@@ -122,14 +126,12 @@ export async function POST(request: Request) {
         longitude,
         accuracy: accuracy ?? null,
         address: address ?? null,
-        images: imagesJson,
-        remark: remarkText,
         qrToken: tokenRecord.token,
         tokenExpiredAt: tokenRecord.expiresAt,
         checkInAt: type === "CLOCK_IN" ? checkedAt : null,
         checkOutAt: type === "CLOCK_OUT" ? checkedAt : null,
         status: type === "CLOCK_OUT" ? "CHECKED_OUT" : "WORKING",
-        note: type === "FIELD_WORK" ? "外勤打卡" : null,
+        note: fieldWorkNote,
       },
     });
 
