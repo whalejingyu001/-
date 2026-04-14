@@ -1,5 +1,6 @@
 import type {
   AttendanceType,
+  AttendanceStatus,
   CustomerPriority,
   CustomerStage,
   FollowUpStatus,
@@ -34,6 +35,12 @@ export const ATTENDANCE_TYPE_LABELS: Record<AttendanceType, string> = {
   CLOCK_IN: "上班打卡",
   CLOCK_OUT: "下班打卡",
   FIELD_WORK: "外勤打卡",
+};
+
+export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  WORKING: "进行中",
+  CHECKED_OUT: "已完成",
+  BLOCKED: "风险",
 };
 
 export const USER_STATUS_LABELS: Record<UserStatus, string> = {

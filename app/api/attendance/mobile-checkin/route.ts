@@ -10,6 +10,8 @@ const payloadSchema = z.object({
   longitude: z.number(),
   accuracy: z.number().optional(),
   address: z.string().optional(),
+  images: z.array(z.string().min(1)).optional(),
+  remark: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "请求参数不合法" }, { status: 400 });
   }
 
-  const { token, type, latitude, longitude, accuracy, address } = parsed.data;
+  const { token, type, latitude, longitude, accuracy, address, images, remark } = parsed.data;
 
   const tokenRecord = await prisma.attendanceQrToken.findUnique({
     where: { token },
@@ -44,6 +46,10 @@ export async function POST(request: Request) {
   const checkedAt = new Date();
   const attendanceDate = startOfDay(checkedAt);
 
+  if (accuracy != null && accuracy > 100) {
+    return NextResponse.json({ error: "定位不准确，请重新获取" }, { status: 400 });
+  }
+
   if (type === "CLOCK_OUT") {
     const pendingFollowUps = await prisma.customer.count({
       where: {
@@ -57,6 +63,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "存在未完成跟进，请先处理" }, { status: 400 });
     }
   }
+
+  if (type === "FIELD_WORK") {
+    if (!remark || !remark.trim()) {
+      return NextResponse.json({ error: "外勤说明必填" }, { status: 400 });
+    }
+    if (!images || images.length === 0) {
+      return NextResponse.json({ error: "外勤打卡必须上传至少 1 张现场照片" }, { status: 400 });
+    }
+
+    const latestFieldWork = await prisma.attendanceRecord.findFirst({
+      where: { userId: tokenRecord.userId, type: "FIELD_WORK", checkedAt: { not: null } },
+      orderBy: { checkedAt: "desc" },
+      select: { checkedAt: true },
+    });
+
+    if (latestFieldWork?.checkedAt) {
+      const diffMs = checkedAt.getTime() - latestFieldWork.checkedAt.getTime();
+      if (diffMs < 30 * 60 * 1000) {
+        return NextResponse.json({ error: "外勤打卡过于频繁，请稍后再试" }, { status: 400 });
+      }
+    }
+  }
+
+  const imagesJson = type === "FIELD_WORK" ? JSON.stringify(images ?? []) : "";
+  const remarkText = type === "FIELD_WORK" ? remark?.trim() ?? null : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.attendanceRecord.upsert({
@@ -73,6 +104,8 @@ export async function POST(request: Request) {
         longitude,
         accuracy: accuracy ?? null,
         address: address ?? null,
+        images: imagesJson,
+        remark: remarkText,
         qrToken: tokenRecord.token,
         tokenExpiredAt: tokenRecord.expiresAt,
         checkInAt: type === "CLOCK_IN" ? checkedAt : undefined,
@@ -89,6 +122,8 @@ export async function POST(request: Request) {
         longitude,
         accuracy: accuracy ?? null,
         address: address ?? null,
+        images: imagesJson,
+        remark: remarkText,
         qrToken: tokenRecord.token,
         tokenExpiredAt: tokenRecord.expiresAt,
         checkInAt: type === "CLOCK_IN" ? checkedAt : null,

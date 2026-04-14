@@ -1,6 +1,6 @@
 import { AttendanceType } from "@prisma/client";
 import { assertModuleAccess } from "@/lib/rbac";
-import { ATTENDANCE_TYPE_LABELS } from "@/lib/enum-labels";
+import { ATTENDANCE_STATUS_LABELS, ATTENDANCE_TYPE_LABELS } from "@/lib/enum-labels";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +9,16 @@ type SearchParams = {
   type?: AttendanceType;
   date?: string;
 };
+
+function parseImages(value?: string | null) {
+  if (!value) return [] as string[];
+  try {
+    const parsed = JSON.parse(value) as string[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 function getDateRange(date?: string) {
   if (!date) return undefined;
@@ -84,19 +94,35 @@ export default async function AttendanceDashboardPage({
                 <th className="px-4 py-3 text-left">打卡时间</th>
                 <th className="px-4 py-3 text-left">打卡地址</th>
                 <th className="px-4 py-3 text-left">状态</th>
+                <th className="px-4 py-3 text-left">外勤说明</th>
+                <th className="px-4 py-3 text-left">现场照片</th>
                 <th className="px-4 py-3 text-left">经纬度</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {records.map((item) => {
                 const time = item.checkedAt ?? item.checkInAt ?? item.checkOutAt ?? item.createdAt;
+                const images = parseImages(item.images);
                 return (
                   <tr key={item.id}>
                     <td className="px-4 py-3">{item.user.name}</td>
                     <td className="px-4 py-3">{ATTENDANCE_TYPE_LABELS[item.type]}</td>
                     <td className="px-4 py-3">{time.toLocaleString("zh-CN")}</td>
                     <td className="px-4 py-3">{item.address ?? "-"}</td>
-                    <td className="px-4 py-3">{item.status}</td>
+                    <td className="px-4 py-3">{ATTENDANCE_STATUS_LABELS[item.status]}</td>
+                    <td className="px-4 py-3">{item.remark ?? "-"}</td>
+                    <td className="px-4 py-3">
+                      {images.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {images.slice(0, 3).map((src, index) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={`${item.id}-${index}`} src={src} alt="外勤现场" className="h-10 w-10 rounded border border-slate-200 object-cover" />
+                          ))}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {item.latitude != null && item.longitude != null
                         ? `${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}`
@@ -107,7 +133,7 @@ export default async function AttendanceDashboardPage({
               })}
               {records.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                     暂无符合条件的打卡记录
                   </td>
                 </tr>
@@ -184,18 +210,34 @@ export default async function AttendanceDashboardPage({
               <th className="px-4 py-3 text-left">打卡时间</th>
               <th className="px-4 py-3 text-left">打卡地址</th>
               <th className="px-4 py-3 text-left">状态</th>
+              <th className="px-4 py-3 text-left">外勤说明</th>
+              <th className="px-4 py-3 text-left">现场照片</th>
               <th className="px-4 py-3 text-left">经纬度</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {myRecords.map((item) => {
               const time = item.checkedAt ?? item.checkInAt ?? item.checkOutAt ?? item.createdAt;
+              const images = parseImages(item.images);
               return (
                 <tr key={item.id}>
                   <td className="px-4 py-3">{ATTENDANCE_TYPE_LABELS[item.type]}</td>
                   <td className="px-4 py-3">{time.toLocaleString("zh-CN")}</td>
                   <td className="px-4 py-3">{item.address ?? "-"}</td>
-                  <td className="px-4 py-3">{item.status}</td>
+                  <td className="px-4 py-3">{ATTENDANCE_STATUS_LABELS[item.status]}</td>
+                  <td className="px-4 py-3">{item.remark ?? "-"}</td>
+                  <td className="px-4 py-3">
+                    {images.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {images.slice(0, 3).map((src, index) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={`${item.id}-${index}`} src={src} alt="外勤现场" className="h-10 w-10 rounded border border-slate-200 object-cover" />
+                        ))}
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     {item.latitude != null && item.longitude != null
                       ? `${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}`
@@ -206,7 +248,7 @@ export default async function AttendanceDashboardPage({
             })}
             {myRecords.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   暂无打卡记录
                 </td>
               </tr>
