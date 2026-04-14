@@ -4,6 +4,7 @@ import type { CurrentUser } from "@/lib/current-user";
 export type ModuleKey =
   | "dashboard"
   | "attendance"
+  | "field-work-board"
   | "customers"
   | "quotes"
   | "orders"
@@ -16,11 +17,12 @@ export type ModuleKey =
 
 const permissions: Record<CurrentUser["role"], ModuleKey[]> = {
   SALES: ["dashboard", "attendance", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
-  SALES_MANAGER: ["dashboard", "attendance", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
+  SALES_MANAGER: ["dashboard", "attendance", "field-work-board", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
   FINANCE: ["dashboard", "quotes", "revenue", "finance"],
   ADMIN: [
     "dashboard",
     "attendance",
+    "field-work-board",
     "customers",
     "quotes",
     "orders",
