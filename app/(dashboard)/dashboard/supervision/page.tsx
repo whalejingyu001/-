@@ -13,7 +13,7 @@ export default async function SupervisionPage() {
     where: {
       ...ownerScope(ownerIds),
       nextFollowUpAt: { lt: new Date() },
-      followUps: { some: { status: { in: ["PENDING", "OVERDUE"] } } },
+      followUps: { some: { status: "PENDING" } },
     },
     include: { owner: { select: { name: true } } },
     orderBy: { nextFollowUpAt: "asc" },

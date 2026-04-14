@@ -15,8 +15,8 @@ export type ModuleKey =
   | "system-settings";
 
 const permissions: Record<CurrentUser["role"], ModuleKey[]> = {
-  SALES: ["dashboard", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
-  SALES_MANAGER: ["dashboard", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
+  SALES: ["dashboard", "attendance", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
+  SALES_MANAGER: ["dashboard", "attendance", "customers", "quotes", "orders", "revenue", "meetings", "finance", "supervision"],
   FINANCE: ["dashboard", "quotes", "revenue", "finance"],
   ADMIN: [
     "dashboard",

@@ -80,6 +80,9 @@ export async function updateAccountAction(formData: FormData) {
   if (id === currentUser.id && status === "DISABLED") {
     throw new Error("不能停用当前管理员账号");
   }
+  if (id === currentUser.id && roleName !== "ADMIN") {
+    throw new Error("不能将当前登录管理员角色改为非管理员");
+  }
 
   await prisma.user.update({
     where: { id },
@@ -132,4 +135,17 @@ export async function resetPasswordAction(formData: FormData) {
 
   revalidatePath("/dashboard/accounts");
   revalidatePath(`/dashboard/accounts/${id}`);
+}
+
+export async function deleteAccountAction(formData: FormData) {
+  const currentUser = await requireCurrentUser();
+  assertAdmin(currentUser);
+
+  const id = String(formData.get("id") || "");
+  if (!id) {
+    throw new Error("缺少账号ID");
+  }
+  if (id === currentUser.id) {
+    throw new Error("不能删除当前登录管理员账号");
+  }
 }

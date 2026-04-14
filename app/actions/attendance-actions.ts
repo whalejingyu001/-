@@ -1,6 +1,6 @@
 "use server";
 
-import { endOfDay, startOfDay } from "date-fns";
+import { startOfDay } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
@@ -12,22 +12,26 @@ export async function checkoutAction() {
   const overdueCustomers = await prisma.customer.count({
     where: {
       ownerId: user.id,
-      nextFollowUpAt: { lt: endOfDay(new Date()) },
+      nextFollowUpAt: { lt: new Date() },
       followUps: {
         some: {
-          status: { in: ["PENDING", "OVERDUE"] },
+          status: "PENDING",
         },
       },
     },
   });
+
+  if (overdueCustomers > 0) {
+    throw new Error("存在未完成跟进，请先处理");
+  }
 
   await prisma.attendanceRecord.upsert({
     where: { userId_attendanceDate_type: { userId: user.id, attendanceDate: todayStart, type: "CLOCK_OUT" } },
     update: {
       checkOutAt: new Date(),
       checkedAt: new Date(),
-      status: overdueCustomers > 0 ? "BLOCKED" : "CHECKED_OUT",
-      note: overdueCustomers > 0 ? `存在 ${overdueCustomers} 个逾期客户，禁止打卡` : "正常打卡",
+      status: "CHECKED_OUT",
+      note: "正常打卡",
     },
     create: {
       userId: user.id,
@@ -36,8 +40,8 @@ export async function checkoutAction() {
       checkInAt: todayStart,
       checkOutAt: new Date(),
       checkedAt: new Date(),
-      status: overdueCustomers > 0 ? "BLOCKED" : "CHECKED_OUT",
-      note: overdueCustomers > 0 ? `存在 ${overdueCustomers} 个逾期客户，禁止打卡` : "正常打卡",
+      status: "CHECKED_OUT",
+      note: "正常打卡",
     },
   });
 

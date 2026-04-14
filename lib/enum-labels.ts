@@ -4,6 +4,8 @@ import type {
   CustomerStage,
   FollowUpStatus,
   MeetingSourceType,
+  OrderImportSource,
+  OrderImportStatus,
   ReimbursementStatus,
   UserStatus,
 } from "@prisma/client";
@@ -51,3 +53,15 @@ export const MEETING_SOURCE_LABELS: Record<MeetingSourceType, string> = {
   VIDEO_UPLOAD: "视频上传",
 };
 
+export const ORDER_IMPORT_SOURCE_LABELS: Record<OrderImportSource, string> = {
+  WMS_A: "WMS-A",
+  WMS_B: "WMS-B",
+  OVERSEAS_DAILY: "海外仓日报",
+  MANUAL_TEMPLATE: "人工模板",
+};
+
+export const ORDER_IMPORT_STATUS_LABELS: Record<OrderImportStatus, string> = {
+  SUCCESS: "成功",
+  PARTIAL: "部分成功",
+  FAILED: "失败",
+};

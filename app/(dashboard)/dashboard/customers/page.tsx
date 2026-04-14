@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CustomerPriority, RoleName } from "@prisma/client";
+import { CustomerPriority, CustomerStage, RoleName } from "@prisma/client";
 import { createCustomerAction } from "@/app/actions/customer-actions";
 import { Badge } from "@/components/ui/badge";
 import { assertModuleAccess } from "@/lib/rbac";
@@ -9,17 +9,77 @@ import { getAccessibleOwnerIds, ownerScope } from "@/lib/data-scope";
 import { prisma } from "@/lib/prisma";
 
 const priorityOptions: CustomerPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+const stageFilterOptions: Array<{ label: string; value: "" | CustomerStage }> = [
+  { label: "全部阶段", value: "" },
+  { label: "新客户", value: "NEW" },
+  { label: "已联系", value: "CONTACTED" },
+  { label: "跟进中", value: "FOLLOWING" },
+  { label: "已成交", value: "WON" },
+];
 
-export default async function CustomersPage() {
+type FollowStatusFilter = "" | "TODAY" | "OVERDUE";
+type OwnerFilter = "MINE" | "ALL";
+
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    keyword?: string;
+    stage?: string;
+    followStatus?: string;
+    priority?: string;
+    owner?: string;
+  }>;
+}) {
   const user = await requireCurrentUser();
   assertModuleAccess(user, "customers");
+  const params = await searchParams;
+
+  const keyword = (params.keyword ?? "").trim();
+  const stage = (params.stage ?? "") as "" | CustomerStage;
+  const followStatus = (params.followStatus ?? "") as FollowStatusFilter;
+  const priority = (params.priority ?? "") as "" | CustomerPriority;
+  const ownerFilter = (params.owner ?? "MINE") as OwnerFilter;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
   const ownerIds = await getAccessibleOwnerIds(user);
+  const ownerWhere =
+    user.role === "ADMIN" && ownerFilter === "ALL"
+      ? {}
+      : ownerFilter === "MINE"
+      ? { ownerId: user.id }
+      : ownerScope(ownerIds);
   const [customers, salesUsers] = await Promise.all([
     prisma.customer.findMany({
-      where: ownerScope(ownerIds),
+      where: {
+        ...ownerWhere,
+        ...(keyword
+          ? {
+              OR: [
+                { name: { contains: keyword, mode: "insensitive" } },
+                { companyName: { contains: keyword, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+        ...(stage ? { stage } : {}),
+        ...(priority ? { priority } : {}),
+        ...(followStatus === "TODAY"
+          ? {
+              nextFollowUpAt: { gte: startOfToday, lt: startOfTomorrow },
+              followUps: { some: { status: "PENDING" } },
+            }
+          : followStatus === "OVERDUE"
+          ? {
+              nextFollowUpAt: { lt: startOfToday },
+              followUps: { some: { status: "PENDING" } },
+            }
+          : {}),
+      },
       include: { owner: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ nextFollowUpAt: "asc" }, { createdAt: "desc" }],
     }),
     prisma.user.findMany({
       where: {
@@ -33,6 +93,21 @@ export default async function CustomersPage() {
 
   const defaultOwnerId =
     user.role === "SALES" ? user.id : salesUsers.find((item) => item.role.name === "SALES")?.id ?? salesUsers[0]?.id ?? "";
+
+  const sortedCustomers = [...customers].sort((a, b) => {
+    const bucket = (date: Date | null) => {
+      if (!date) return 2;
+      if (date < startOfToday) return 0;
+      if (date >= startOfToday && date < startOfTomorrow) return 1;
+      return 2;
+    };
+    const bucketA = bucket(a.nextFollowUpAt);
+    const bucketB = bucket(b.nextFollowUpAt);
+    if (bucketA !== bucketB) return bucketA - bucketB;
+    const timeA = a.nextFollowUpAt ? a.nextFollowUpAt.getTime() : Number.MAX_SAFE_INTEGER;
+    const timeB = b.nextFollowUpAt ? b.nextFollowUpAt.getTime() : Number.MAX_SAFE_INTEGER;
+    return timeA - timeB;
+  });
 
   return (
     <div className="space-y-6">
@@ -105,6 +180,48 @@ export default async function CustomersPage() {
       </form>
 
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <form method="get" className="grid grid-cols-1 gap-3 border-b border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
+          <input
+            name="keyword"
+            defaultValue={keyword}
+            placeholder="搜索客户姓名 / 公司名"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+          />
+          <select name="stage" defaultValue={stage} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+            {stageFilterOptions.map((item) => (
+              <option key={item.label} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          <select name="followStatus" defaultValue={followStatus} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+            <option value="">全部跟进状态</option>
+            <option value="TODAY">今日待跟进</option>
+            <option value="OVERDUE">未完成跟进</option>
+          </select>
+          <select name="priority" defaultValue={priority} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+            <option value="">全部优先级</option>
+            <option value="HIGH">高</option>
+            <option value="MEDIUM">中</option>
+            <option value="LOW">低</option>
+          </select>
+          {user.role === "ADMIN" ? (
+            <select name="owner" defaultValue={ownerFilter} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+              <option value="MINE">我的客户</option>
+              <option value="ALL">全部客户</option>
+            </select>
+          ) : (
+            <input type="hidden" name="owner" value="MINE" />
+          )}
+          <div className="md:col-span-5 flex justify-end gap-2">
+            <Link href="/dashboard/customers" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+              重置
+            </Link>
+            <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+              筛选
+            </button>
+          </div>
+        </form>
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -114,11 +231,12 @@ export default async function CustomersPage() {
               <th className="px-4 py-3 text-left">当前阶段</th>
               <th className="px-4 py-3 text-left">优先级</th>
               <th className="px-4 py-3 text-left">每单利润</th>
+              <th className="px-4 py-3 text-left">下一次跟进时间</th>
               <th className="px-4 py-3 text-left">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {customers.map((item) => (
+            {sortedCustomers.map((item) => (
               <tr key={item.id}>
                 <td className="px-4 py-3">{item.name}</td>
                 <td className="px-4 py-3">{item.companyName ?? "-"}</td>
@@ -128,6 +246,7 @@ export default async function CustomersPage() {
                   <Badge text={CUSTOMER_PRIORITY_LABELS[item.priority]} variant={item.priority === "CRITICAL" ? "danger" : "info"} />
                 </td>
                 <td className="px-4 py-3">¥{Number(item.unitProfit).toFixed(2)}</td>
+                <td className="px-4 py-3">{item.nextFollowUpAt ? item.nextFollowUpAt.toLocaleString("zh-CN") : "-"}</td>
                 <td className="px-4 py-3">
                   <Link href={`/dashboard/customers/${item.id}`} className="text-slate-900 underline">
                     查看详情
@@ -135,6 +254,13 @@ export default async function CustomersPage() {
                 </td>
               </tr>
             ))}
+            {sortedCustomers.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                  没有符合条件的客户
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

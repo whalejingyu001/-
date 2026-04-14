@@ -70,6 +70,19 @@ enum UserStatus {
   DISABLED
 }
 
+enum OrderImportSource {
+  WMS_A
+  WMS_B
+  OVERSEAS_DAILY
+  MANUAL_TEMPLATE
+}
+
+enum OrderImportStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
 model Role {
   id        String   @id @default(cuid())
   name      RoleName @unique
@@ -99,6 +112,7 @@ model User {
   reviewedReimbursements Reimbursement[] @relation("ReimbursementReviewer")
   attendanceRecords AttendanceRecord[]
   attendanceQrTokens AttendanceQrToken[]
+  orderImportBatches OrderImportBatch[] @relation("OrderImportOperator")
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
@@ -130,6 +144,7 @@ model Customer {
   meetings         MeetingRecord[]
   quotes           Quote[]
   orderStats       CustomerOrderStat[]
+  orderImportRows  OrderImportRow[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -208,6 +223,41 @@ model CustomerOrderStat {
 
   @@unique([customerId, statDate])
   @@index([statDate])
+}
+
+model OrderImportBatch {
+  id          String            @id @default(cuid())
+  source      OrderImportSource
+  fileName    String
+  importedById String
+  importedBy  User              @relation("OrderImportOperator", fields: [importedById], references: [id])
+  successCount Int              @default(0)
+  failedCount Int               @default(0)
+  status      OrderImportStatus @default(FAILED)
+  createdAt   DateTime          @default(now())
+  rows        OrderImportRow[]
+
+  @@index([createdAt])
+  @@index([source, status])
+}
+
+model OrderImportRow {
+  id             String            @id @default(cuid())
+  batchId        String
+  batch          OrderImportBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rawCustomerName String
+  rawCustomerCode String?
+  orderDate      DateTime
+  orderCount     Int
+  orderNo        String?
+  warehouseSource String?
+  customerId     String?
+  customer       Customer?         @relation(fields: [customerId], references: [id])
+  errorMessage   String?
+  createdAt      DateTime          @default(now())
+
+  @@index([batchId, orderDate])
+  @@index([customerId])
 }
 
 model Reimbursement {

@@ -4,11 +4,13 @@ import { prisma } from "@/lib/prisma";
 export default async function MobileAttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; type?: string }>;
 }) {
   const now = new Date();
-  const { token } = await searchParams;
+  const { token, type } = await searchParams;
   const tokenValue = token ?? "";
+  const defaultType =
+    type === "CLOCK_OUT" || type === "FIELD_WORK" || type === "CLOCK_IN" ? type : "CLOCK_IN";
 
   if (!tokenValue) {
     return <div className="p-6 text-sm text-rose-600">缺少打卡 token。</div>;
@@ -31,5 +33,12 @@ export default async function MobileAttendancePage({
     return <div className="p-6 text-sm text-rose-600">该打卡二维码已过期，请返回电脑端刷新。</div>;
   }
 
-  return <MobileAttendanceForm token={tokenValue} userName={tokenRecord.user.name} userEmail={tokenRecord.user.email} />;
+  return (
+    <MobileAttendanceForm
+      token={tokenValue}
+      userName={tokenRecord.user.name}
+      userEmail={tokenRecord.user.email}
+      defaultType={defaultType}
+    />
+  );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { upsertOrderStatAction } from "@/app/actions/order-actions";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -27,7 +28,17 @@ export default async function OrderStatsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">订单数量监控</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">订单数量监控</h1>
+        <div className="flex gap-2">
+          <Link href="/dashboard/order-stats/import" className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white">
+            订单数据导入
+          </Link>
+          <Link href="/dashboard/order-stats/import-logs" className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
+            导入记录
+          </Link>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

@@ -6,6 +6,7 @@ type Props = {
   token: string;
   userName: string;
   userEmail: string;
+  defaultType?: "CLOCK_IN" | "CLOCK_OUT" | "FIELD_WORK";
 };
 
 const TYPE_OPTIONS = [
@@ -14,8 +15,8 @@ const TYPE_OPTIONS = [
   { value: "FIELD_WORK", label: "外勤打卡" },
 ] as const;
 
-export function MobileAttendanceForm({ token, userName, userEmail }: Props) {
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]["value"]>("CLOCK_IN");
+export function MobileAttendanceForm({ token, userName, userEmail, defaultType = "CLOCK_IN" }: Props) {
+  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]["value"]>(defaultType);
   const [loading, setLoading] = useState(false);
   const [locationText, setLocationText] = useState("未获取定位");
   const [message, setMessage] = useState("");
@@ -94,4 +95,3 @@ export function MobileAttendanceForm({ token, userName, userEmail }: Props) {
     </div>
   );
 }
-

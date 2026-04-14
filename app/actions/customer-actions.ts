@@ -79,10 +79,16 @@ export async function createCustomerAction(formData: FormData) {
 export async function createFollowUpAction(formData: FormData) {
   const user = await requireCurrentUser();
   const customerId = String(formData.get("customerId") || "");
-  const content = String(formData.get("content") || "");
+  const todo = String(formData.get("todo") || "");
+  const nextFollowAtRaw = String(formData.get("nextFollowAt") || "");
 
-  if (!customerId || !content) {
+  if (!customerId || !todo || !nextFollowAtRaw) {
     throw new Error("参数缺失");
+  }
+
+  const nextFollowAt = new Date(nextFollowAtRaw);
+  if (Number.isNaN(nextFollowAt.getTime())) {
+    throw new Error("下一次跟进时间不合法");
   }
 
   const ownerIds = await getAccessibleOwnerIds(user);
@@ -97,17 +103,114 @@ export async function createFollowUpAction(formData: FormData) {
     throw new Error("无权限访问客户");
   }
 
-  await prisma.followUp.create({
-    data: {
-      customerId,
-      userId: user.id,
-      content,
-      status: "PENDING",
-    },
+  if (user.role === "SALES" && customer.ownerId !== user.id) {
+    throw new Error("销售只能操作自己的客户跟进");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.followUp.create({
+      data: {
+        customerId,
+        userId: user.id,
+        content: JSON.stringify({
+          todo: todo.trim(),
+          result: "",
+          nextAction: "",
+        }),
+        dueAt: nextFollowAt,
+        status: "PENDING",
+      },
+    });
+
+    await tx.customer.update({
+      where: { id: customerId },
+      data: { nextFollowUpAt: nextFollowAt },
+    });
   });
 
   revalidatePath(`/dashboard/customers/${customerId}`);
   revalidatePath("/dashboard/customers");
+  revalidatePath("/dashboard");
+}
+
+const completeFollowUpSchema = z.object({
+  customerId: z.string().min(1),
+  followUpId: z.string().min(1),
+  result: z.string().trim().min(1, "跟进结果必填"),
+  nextAction: z.string().optional(),
+  nextFollowAt: z.string().min(1, "下一次跟进时间必填"),
+});
+
+export async function completeFollowUpAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const parsed = completeFollowUpSchema.safeParse({
+    customerId: String(formData.get("customerId") || ""),
+    followUpId: String(formData.get("followUpId") || ""),
+    result: String(formData.get("result") || ""),
+    nextAction: String(formData.get("nextAction") || ""),
+    nextFollowAt: String(formData.get("nextFollowAt") || ""),
+  });
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "参数校验失败");
+  }
+
+  const ownerIds = await getAccessibleOwnerIds(user);
+  const followUp = await prisma.followUp.findFirst({
+    where: {
+      id: parsed.data.followUpId,
+      customerId: parsed.data.customerId,
+      customer: ownerIds ? { ownerId: { in: ownerIds } } : undefined,
+    },
+    include: {
+      customer: { select: { id: true, ownerId: true } },
+    },
+  });
+
+  if (!followUp) {
+    throw new Error("无权限访问跟进记录");
+  }
+  if (user.role === "SALES" && followUp.userId !== user.id) {
+    throw new Error("销售只能处理自己创建的跟进");
+  }
+
+  const nextFollowAt = new Date(parsed.data.nextFollowAt);
+  if (Number.isNaN(nextFollowAt.getTime())) {
+    throw new Error("下一次跟进时间不合法");
+  }
+
+  let previousTodo = "";
+  try {
+    const content = JSON.parse(followUp.content) as { todo?: string };
+    previousTodo = content.todo ?? "";
+  } catch {
+    previousTodo = followUp.content;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.followUp.update({
+      where: { id: followUp.id },
+      data: {
+        status: "DONE",
+        completedAt: new Date(),
+        dueAt: nextFollowAt,
+        content: JSON.stringify({
+          todo: previousTodo,
+          result: parsed.data.result.trim(),
+          nextAction: parsed.data.nextAction?.trim() ?? "",
+        }),
+      },
+    });
+
+    await tx.customer.update({
+      where: { id: followUp.customer.id },
+      data: { nextFollowUpAt: nextFollowAt },
+    });
+  });
+
+  revalidatePath(`/dashboard/customers/${followUp.customer.id}`);
+  revalidatePath("/dashboard/customers");
+  revalidatePath("/dashboard");
 }
 
 export async function updateCustomerTagsAction(formData: FormData) {

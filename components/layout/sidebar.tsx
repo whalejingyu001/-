@@ -4,7 +4,7 @@ import { canAccessModule, ModuleKey } from "@/lib/rbac";
 
 const items: Array<{ key: ModuleKey; href: string; label: string }> = [
   { key: "dashboard", href: "/dashboard", label: "首页" },
-  { key: "attendance", href: "/dashboard/attendance", label: "打卡记录管理" },
+  { key: "attendance", href: "/dashboard/attendance", label: "打卡中心" },
   { key: "customers", href: "/dashboard/customers", label: "客户中心" },
   { key: "quotes", href: "/dashboard/quotes", label: "报价模块" },
   { key: "orders", href: "/dashboard/order-stats", label: "订单数量监控" },

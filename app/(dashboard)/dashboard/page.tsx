@@ -10,8 +10,7 @@ import { calculateRevenueByRange, thisMonthRange, thisWeekRange } from "@/lib/re
 async function getSalesDashboard(userId: string) {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
-  const [myCustomers, todayOrders, inFollowUp, overdue, won, reminders, todayDueCustomers, overdueCustomers] = await Promise.all([
-    prisma.customer.count({ where: { ownerId: userId } }),
+  const [todayOrders, todayNewCustomersCount, reminders, todayDueCustomers, overdueCustomers, todayNewCustomers] = await Promise.all([
     prisma.customerOrderStat.aggregate({
       where: {
         statDate: { gte: todayStart, lte: todayEnd },
@@ -19,13 +18,20 @@ async function getSalesDashboard(userId: string) {
       },
       _sum: { orderCount: true },
     }),
-    prisma.customer.count({ where: { ownerId: userId, stage: { in: ["CONTACTED", "FOLLOWING"] } } }),
-    prisma.customer.count({ where: { ownerId: userId, nextFollowUpAt: { lt: todayStart } } }),
-    prisma.customer.count({ where: { ownerId: userId, stage: "WON" } }),
-    prisma.followUp.count({ where: { userId, status: { in: ["PENDING", "OVERDUE"] } } }),
+    prisma.customer.count({
+      where: {
+        ownerId: userId,
+        createdAt: { gte: todayStart, lte: todayEnd },
+      },
+    }),
+    prisma.followUp.count({ where: { userId, status: "PENDING" } }),
     prisma.customer.findMany({
-      where: { ownerId: userId, nextFollowUpAt: { gte: todayStart, lte: todayEnd } },
-      select: { id: true, name: true, nextFollowUpAt: true },
+      where: {
+        ownerId: userId,
+        nextFollowUpAt: { gte: todayStart, lte: todayEnd },
+        followUps: { some: { status: "PENDING" } },
+      },
+      select: { id: true, name: true, companyName: true, nextFollowUpAt: true },
       orderBy: { nextFollowUpAt: "asc" },
       take: 20,
     }),
@@ -33,33 +39,32 @@ async function getSalesDashboard(userId: string) {
       where: {
         ownerId: userId,
         nextFollowUpAt: { lt: todayStart },
-        followUps: { some: { status: { in: ["PENDING", "OVERDUE"] } } },
+        followUps: { some: { status: "PENDING" } },
       },
-      select: { id: true, name: true, nextFollowUpAt: true },
+      select: { id: true, name: true, companyName: true, nextFollowUpAt: true },
       orderBy: { nextFollowUpAt: "asc" },
+      take: 20,
+    }),
+    prisma.customer.findMany({
+      where: {
+        ownerId: userId,
+        createdAt: { gte: todayStart, lte: todayEnd },
+      },
+      select: { id: true, name: true, companyName: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
       take: 20,
     }),
   ]);
 
   return (
     <>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">销售首页</h1>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard title="我的客户" value={myCustomers} />
+      <h1 className="mb-6 text-2xl font-bold text-slate-900">销售今日工作台</h1>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard title="今日订单量" value={todayOrders._sum.orderCount ?? 0} />
-        <StatCard title="跟进中客户" value={inFollowUp} />
-        <StatCard title="逾期未跟进" value={overdue} />
-        <StatCard title="已成交客户" value={won} />
-        <StatCard title="未完成跟进提醒" value={reminders} />
+        <StatCard title="今日新增客户" value={todayNewCustomersCount} />
+        <StatCard title="未完成跟进数" value={reminders} />
       </div>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/dashboard/customers" className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
-          新建客户入口
-        </Link>
-        <Link href="/dashboard/supervision" className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
-          查看提醒
-        </Link>
-      </div>
+
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold text-slate-900">今日待跟进</h2>
@@ -67,7 +72,10 @@ async function getSalesDashboard(userId: string) {
             {todayDueCustomers.length === 0 ? <p className="text-slate-500">今日暂无待跟进客户</p> : null}
             {todayDueCustomers.map((item) => (
               <Link key={item.id} href={`/dashboard/customers/${item.id}`} className="flex items-center justify-between rounded bg-slate-50 px-3 py-2 hover:bg-slate-100">
-                <span>{item.name}</span>
+                <div>
+                  <p className="font-medium text-slate-900">{item.name}</p>
+                  <p className="text-xs text-slate-500">{item.companyName ?? "-"}</p>
+                </div>
                 <span className="text-xs text-slate-500">{item.nextFollowUpAt?.toLocaleString("zh-CN")}</span>
               </Link>
             ))}
@@ -79,10 +87,55 @@ async function getSalesDashboard(userId: string) {
             {overdueCustomers.length === 0 ? <p className="text-slate-500">暂无逾期跟进客户</p> : null}
             {overdueCustomers.map((item) => (
               <Link key={item.id} href={`/dashboard/customers/${item.id}`} className="flex items-center justify-between rounded bg-rose-50 px-3 py-2 text-rose-700 hover:bg-rose-100">
-                <span>{item.name}</span>
+                <div>
+                  <p className="font-medium">{item.name}</p>
+                  <p className="text-xs text-rose-500">{item.companyName ?? "-"}</p>
+                </div>
                 <span className="text-xs">逾期 {differenceInCalendarDays(todayStart, item.nextFollowUpAt ?? todayStart)} 天</span>
               </Link>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">今日新增客户</h2>
+          <div className="space-y-2 text-sm">
+            {todayNewCustomers.length === 0 ? <p className="text-slate-500">今日暂无新增客户</p> : null}
+            {todayNewCustomers.map((item) => (
+              <Link key={item.id} href={`/dashboard/customers/${item.id}`} className="flex items-center justify-between rounded bg-slate-50 px-3 py-2 hover:bg-slate-100">
+                <div>
+                  <p className="font-medium text-slate-900">{item.name}</p>
+                  <p className="text-xs text-slate-500">{item.companyName ?? "-"}</p>
+                </div>
+                <span className="text-xs text-slate-500">{item.createdAt.toLocaleString("zh-CN")}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">快捷操作</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Link href="/dashboard/customers" className="rounded-md bg-slate-900 px-4 py-2 text-center text-sm text-white">
+              新建客户
+            </Link>
+            <Link href="/dashboard/customers" className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm text-slate-700 hover:bg-slate-50">
+              新增跟进
+            </Link>
+            <Link href="/dashboard/quotes" className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm text-slate-700 hover:bg-slate-50">
+              新增报价
+            </Link>
+            <Link href="/attendance/check-in?type=CLOCK_OUT" className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm text-slate-700 hover:bg-slate-50">
+              下班打卡
+            </Link>
+            <Link href="/attendance/check-in?type=FIELD_WORK" className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm text-slate-700 hover:bg-slate-50">
+              外勤打卡
+            </Link>
+            <Link href="/dashboard/attendance" className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm text-slate-700 hover:bg-slate-50">
+              打卡中心
+            </Link>
           </div>
         </div>
       </div>
@@ -123,64 +176,214 @@ async function getFinanceDashboard() {
 }
 
 async function getAdminDashboard(ownerIds: string[] | undefined) {
-  const week = thisWeekRange();
-  const month = thisMonthRange();
+  const now = new Date();
+  const today = { gte: startOfDay(now), lte: endOfDay(now) };
 
-  const customers = await prisma.customer.findMany({
-    where: ownerScope(ownerIds),
-    select: { id: true, owner: { select: { name: true } } },
-  });
-  const customerIds = customers.map((c) => c.id);
-
-  const [todayRevenue, weekRevenue, monthRevenue, totalOrders, pendingFollowUps, rankingStats] = await Promise.all([
-    calculateRevenueByRange(customerIds.length ? customerIds : undefined, { gte: startOfDay(new Date()), lte: endOfDay(new Date()) }),
-    calculateRevenueByRange(customerIds.length ? customerIds : undefined, week),
-    calculateRevenueByRange(customerIds.length ? customerIds : undefined, month),
-    prisma.customerOrderStat.aggregate({
-      where: { ...(customerIds.length ? { customerId: { in: customerIds } } : {}) },
-      _sum: { orderCount: true },
+  const [customers, salesUsers, todayOrderRows, pendingFollowUps, todayNewCustomers, riskCustomers] = await Promise.all([
+    prisma.customer.findMany({
+      where: ownerScope(ownerIds),
+      select: { id: true, ownerId: true, unitProfit: true, owner: { select: { name: true } } },
+    }),
+    prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        role: { name: "SALES" },
+        ...(ownerIds ? { id: { in: ownerIds } } : {}),
+      },
+      select: { id: true, name: true },
+    }),
+    prisma.customerOrderStat.findMany({
+      where: {
+        statDate: today,
+        customer: ownerScope(ownerIds),
+      },
+      select: { customerId: true, orderCount: true },
     }),
     prisma.followUp.count({
-      where: { status: { in: ["PENDING", "OVERDUE"] }, customer: ownerScope(ownerIds) },
+      where: {
+        status: { not: "DONE" },
+        customer: ownerScope(ownerIds),
+      },
     }),
-    prisma.customerOrderStat.groupBy({
-      by: ["customerId"],
-      _sum: { orderCount: true },
-      where: { ...(customerIds.length ? { customerId: { in: customerIds } } : {}) },
-      orderBy: { _sum: { orderCount: "desc" } },
-      take: 5,
+    prisma.customer.count({
+      where: {
+        ...ownerScope(ownerIds),
+        createdAt: today,
+      },
+    }),
+    prisma.customer.findMany({
+      where: {
+        ...ownerScope(ownerIds),
+        nextFollowUpAt: { lt: now },
+        followUps: { some: { status: { not: "DONE" } } },
+      },
+      select: {
+        id: true,
+        name: true,
+        companyName: true,
+        nextFollowUpAt: true,
+        owner: { select: { name: true } },
+      },
+      orderBy: { nextFollowUpAt: "asc" },
+      take: 20,
     }),
   ]);
 
-  const ranking = rankingStats.map((row) => {
-    const customer = customers.find((c) => c.id === row.customerId);
-    return {
-      owner: customer?.owner.name ?? "未知",
-      order: row._sum.orderCount ?? 0,
-    };
+  const customerById = new Map(customers.map((c) => [c.id, c]));
+  const salesById = new Map(salesUsers.map((s) => [s.id, s]));
+  const ownerOrderMap = new Map<string, number>();
+  const ownerRevenueMap = new Map<string, number>();
+
+  for (const row of todayOrderRows) {
+    const customer = customerById.get(row.customerId);
+    if (!customer) continue;
+    const ownerId = customer.ownerId;
+    ownerOrderMap.set(ownerId, (ownerOrderMap.get(ownerId) ?? 0) + row.orderCount);
+    ownerRevenueMap.set(ownerId, (ownerRevenueMap.get(ownerId) ?? 0) + row.orderCount * Number(customer.unitProfit));
+  }
+
+  const salesRankingBase = salesUsers.map((sales) => ({
+    userId: sales.id,
+    name: sales.name,
+    orderCount: ownerOrderMap.get(sales.id) ?? 0,
+    revenue: ownerRevenueMap.get(sales.id) ?? 0,
+  }));
+
+  const byOrderRanking = [...salesRankingBase].sort((a, b) => b.orderCount - a.orderCount);
+  const byRevenueRanking = [...salesRankingBase].sort((a, b) => b.revenue - a.revenue);
+
+  const customerDistributionRows = await prisma.customer.groupBy({
+    by: ["ownerId"],
+    _count: { _all: true },
+    where: ownerScope(ownerIds),
   });
+
+  const todayDoneRows = await prisma.followUp.groupBy({
+    by: ["userId"],
+    _count: { _all: true },
+    where: {
+      status: "DONE",
+      completedAt: today,
+      ...(ownerIds ? { userId: { in: ownerIds } } : {}),
+    },
+  });
+
+  const pendingRows = await prisma.followUp.groupBy({
+    by: ["userId"],
+    _count: { _all: true },
+    where: {
+      status: { not: "DONE" },
+      customer: ownerScope(ownerIds),
+      ...(ownerIds ? { userId: { in: ownerIds } } : {}),
+    },
+  });
+
+  const doneMap = new Map(todayDoneRows.map((row) => [row.userId, row._count._all]));
+  const pendingMap = new Map(pendingRows.map((row) => [row.userId, row._count._all]));
+  const followExecutionRows = salesUsers
+    .map((sales) => ({
+      userId: sales.id,
+      name: sales.name,
+      todayDone: doneMap.get(sales.id) ?? 0,
+      pending: pendingMap.get(sales.id) ?? 0,
+    }))
+    .sort((a, b) => b.todayDone - a.todayDone || a.pending - b.pending);
+
+  const customerDistribution = customerDistributionRows
+    .map((row) => ({
+      ownerId: row.ownerId,
+      name: salesById.get(row.ownerId)?.name ?? "未知销售",
+      count: row._count._all,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const todayTotalOrders = todayOrderRows.reduce((sum, row) => sum + row.orderCount, 0);
+  const todayRevenue = todayOrderRows.reduce((sum, row) => {
+    const customer = customerById.get(row.customerId);
+    return sum + row.orderCount * Number(customer?.unitProfit ?? 0);
+  }, 0);
 
   return (
     <>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">管理员首页</h1>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <h1 className="mb-6 text-2xl font-bold text-slate-900">销售主管 / 管理员看板</h1>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="今日总订单量" value={todayTotalOrders} />
         <StatCard title="今日总收入" value={currency(todayRevenue)} />
-        <StatCard title="本周总收入" value={currency(weekRevenue)} />
-        <StatCard title="本月总收入" value={currency(monthRevenue)} />
-        <StatCard title="总订单量" value={totalOrders._sum.orderCount ?? 0} />
-        <StatCard title="团队待处理跟进" value={pendingFollowUps} />
+        <StatCard title="未完成跟进总数" value={pendingFollowUps} />
+        <StatCard title="今日新增客户数" value={todayNewCustomers} />
       </div>
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">销售排行</h2>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">销售排行榜（按订单量）</h2>
+          <div className="mt-3 space-y-2">
+            {byOrderRanking.map((item, index) => (
+              <div key={`order-${item.userId}`} className="flex justify-between rounded bg-slate-50 px-3 py-2 text-sm">
+                <span>{index + 1}. {item.name}</span>
+                <span>{item.orderCount} 单</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">销售排行榜（按收入）</h2>
+          <div className="mt-3 space-y-2">
+            {byRevenueRanking.map((item, index) => (
+              <div key={`revenue-${item.userId}`} className="flex justify-between rounded bg-slate-50 px-3 py-2 text-sm">
+                <span>{index + 1}. {item.name}</span>
+                <span>{currency(item.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">跟进执行排行榜</h2>
+          <div className="mt-3 space-y-2">
+            {followExecutionRows.map((item) => (
+              <div key={`follow-${item.userId}`} className="flex items-center justify-between rounded bg-slate-50 px-3 py-2 text-sm">
+                <span>{item.name}</span>
+                <span className="text-slate-600">今日完成 {item.todayDone} / 未完成 {item.pending}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">客户分布（按销售）</h2>
+          <div className="mt-3 space-y-2">
+            {customerDistribution.map((item) => (
+              <div key={`dist-${item.ownerId}`} className="flex justify-between rounded bg-slate-50 px-3 py-2 text-sm">
+                <span>{item.name}</span>
+                <span>{item.count} 个客户</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className="mt-6 rounded-lg border border-rose-200 bg-rose-50 p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-rose-800">逾期客户（风险）</h2>
         <div className="mt-3 space-y-2">
-          {ranking.map((item, index) => (
-            <div key={`${item.owner}-${index}`} className="flex justify-between rounded bg-slate-50 px-3 py-2 text-sm">
-              <span>{index + 1}. {item.owner}</span>
-              <span>{item.order} 单</span>
-            </div>
+          {riskCustomers.length === 0 ? <p className="text-sm text-rose-600">当前无逾期风险客户</p> : null}
+          {riskCustomers.map((item) => (
+            <Link
+              key={item.id}
+              href={`/dashboard/customers/${item.id}`}
+              className="flex items-center justify-between rounded bg-white px-3 py-2 text-sm text-rose-800 hover:bg-rose-100"
+            >
+              <span>
+                {item.name}（{item.companyName ?? "-"} / {item.owner.name}）
+              </span>
+              <span>逾期 {differenceInCalendarDays(now, item.nextFollowUpAt ?? now)} 天</span>
+            </Link>
           ))}
         </div>
-      </div>
+      </section>
+
       <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
         <Link href="/dashboard/accounts" className="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm hover:bg-slate-50">
           <p className="font-semibold text-slate-900">账户与权限</p>

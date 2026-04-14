@@ -44,6 +44,20 @@ export async function POST(request: Request) {
   const checkedAt = new Date();
   const attendanceDate = startOfDay(checkedAt);
 
+  if (type === "CLOCK_OUT") {
+    const pendingFollowUps = await prisma.customer.count({
+      where: {
+        ownerId: tokenRecord.userId,
+        nextFollowUpAt: { lt: checkedAt },
+        followUps: { some: { status: "PENDING" } },
+      },
+    });
+
+    if (pendingFollowUps > 0) {
+      return NextResponse.json({ error: "存在未完成跟进，请先处理" }, { status: 400 });
+    }
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.attendanceRecord.upsert({
       where: {
@@ -92,4 +106,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
-

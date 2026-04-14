@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
-import { createFollowUpAction, updateCustomerStageAction, updateCustomerTagsAction } from "@/app/actions/customer-actions";
+import {
+  completeFollowUpAction,
+  createFollowUpAction,
+  updateCustomerStageAction,
+  updateCustomerTagsAction,
+} from "@/app/actions/customer-actions";
 import { createQuoteAction } from "@/app/actions/quote-actions";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,6 +23,19 @@ function splitComma(value?: string | null) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function parseFollowUpContent(content: string) {
+  try {
+    const parsed = JSON.parse(content) as { todo?: string; result?: string; nextAction?: string };
+    return {
+      todo: parsed.todo ?? "",
+      result: parsed.result ?? "",
+      nextAction: parsed.nextAction ?? "",
+    };
+  } catch {
+    return { todo: "", result: content, nextAction: "" };
+  }
 }
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -91,20 +109,60 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">跟进记录</h2>
-        <form action={createFollowUpAction} className="mb-4 flex gap-3">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">跟进记录</h2>
+          <a href="#followup-create" className="rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white">
+            新增跟进
+          </a>
+        </div>
+        <form id="followup-create" action={createFollowUpAction} className="mb-4 grid grid-cols-1 gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 md:grid-cols-3">
           <input type="hidden" name="customerId" value={customer.id} />
-          <input name="content" placeholder="新增跟进记录" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" required />
-          <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">提交</button>
+          <input name="todo" placeholder="跟进事项（必填）" className="rounded-md border border-slate-300 px-3 py-2 text-sm md:col-span-2" required />
+          <input
+            name="nextFollowAt"
+            type="datetime-local"
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            required
+          />
+          <div className="md:col-span-3 flex justify-end">
+            <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">新增跟进</button>
+          </div>
         </form>
         <div className="space-y-2 text-sm">
           {customer.followUps.map((item) => (
             <div key={item.id} className="rounded bg-slate-50 p-3">
               <div className="flex items-center justify-between">
-                <span>{item.content}</span>
-                <Badge text={FOLLOW_UP_STATUS_LABELS[item.status]} variant={item.status === "OVERDUE" ? "danger" : item.status === "DONE" ? "success" : "warning"} />
+                <span className="font-medium text-slate-900">{parseFollowUpContent(item.content).todo || "跟进记录"}</span>
+                <Badge text={FOLLOW_UP_STATUS_LABELS[item.status]} variant={item.status === "DONE" ? "success" : "warning"} />
               </div>
-              <p className="mt-1 text-xs text-slate-500">{item.createdAt.toLocaleString("zh-CN")}</p>
+              <div className="mt-2 grid grid-cols-1 gap-1 text-xs text-slate-600 md:grid-cols-3">
+                <p>跟进时间：{item.dueAt?.toLocaleString("zh-CN") ?? "-"}</p>
+                <p>跟进结果：{parseFollowUpContent(item.content).result || (item.status === "PENDING" ? "待填写" : "-")}</p>
+                <p>下一步动作：{parseFollowUpContent(item.content).nextAction || "-"}</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">创建时间：{item.createdAt.toLocaleString("zh-CN")}</p>
+              {item.status === "PENDING" ? (
+                <form action={completeFollowUpAction} className="mt-3 grid grid-cols-1 gap-2 rounded border border-amber-200 bg-amber-50 p-3 md:grid-cols-3">
+                  <input type="hidden" name="customerId" value={customer.id} />
+                  <input type="hidden" name="followUpId" value={item.id} />
+                  <input
+                    name="result"
+                    placeholder="跟进结果（必填）"
+                    className="rounded-md border border-amber-300 px-3 py-2 text-sm md:col-span-3"
+                    required
+                  />
+                  <input name="nextAction" placeholder="下一步动作（可选）" className="rounded-md border border-amber-300 px-3 py-2 text-sm md:col-span-2" />
+                  <input
+                    name="nextFollowAt"
+                    type="datetime-local"
+                    className="rounded-md border border-amber-300 px-3 py-2 text-sm"
+                    required
+                  />
+                  <div className="md:col-span-3 flex justify-end">
+                    <button className="rounded-md bg-amber-600 px-4 py-2 text-sm text-white">提交结果并完成</button>
+                  </div>
+                </form>
+              ) : null}
             </div>
           ))}
         </div>
