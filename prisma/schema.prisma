@@ -36,9 +36,15 @@ enum FollowUpStatus {
 }
 
 enum MeetingSourceType {
-  REALTIME_AUDIO
   AUDIO_UPLOAD
   VIDEO_UPLOAD
+}
+
+enum MeetingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 enum ReimbursementStatus {
@@ -168,19 +174,27 @@ model FollowUp {
 }
 
 model MeetingRecord {
-  id          String            @id @default(cuid())
-  customerId  String?
-  customer    Customer?         @relation(fields: [customerId], references: [id])
-  userId      String
-  user        User              @relation(fields: [userId], references: [id])
-  title       String
-  sourceType  MeetingSourceType
-  sourceUrl   String?
-  transcript  String
-  aiSummary   String
-  createdAt   DateTime          @default(now())
+  id                String            @id @default(cuid())
+  customerId        String?
+  customer          Customer?         @relation(fields: [customerId], references: [id])
+  userId            String
+  user              User              @relation(fields: [userId], references: [id])
+  title             String
+  sourceType        MeetingSourceType
+  status            MeetingStatus     @default(PENDING)
+  sourceUrl         String?
+  originalFileUrl   String?
+  originalFileName  String?
+  extractedAudioUrl String?
+  transcript        String            @default("")
+  aiSummary         String            @default("")
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([customerId])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Quote {

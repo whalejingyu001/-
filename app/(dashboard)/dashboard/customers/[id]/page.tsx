@@ -12,6 +12,7 @@ import {
   CUSTOMER_STAGE_LABELS,
   FOLLOW_UP_STATUS_LABELS,
   MEETING_SOURCE_LABELS,
+  MEETING_STATUS_LABELS,
 } from "@/lib/enum-labels";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -180,7 +181,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   <span className="text-xs text-slate-500">{MEETING_SOURCE_LABELS[meeting.sourceType]}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">{meeting.createdAt.toLocaleString("zh-CN")}</p>
-                <p className="mt-2 text-slate-700">{meeting.transcript}</p>
+                <p className="mt-1 text-xs text-slate-500">状态：{MEETING_STATUS_LABELS[meeting.status]}</p>
+                <a href={`/dashboard/meetings/${meeting.id}`} className="mt-2 inline-block text-xs text-blue-600 underline">
+                  查看详情
+                </a>
               </div>
             ))}
           </div>

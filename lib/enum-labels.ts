@@ -5,6 +5,7 @@ import type {
   CustomerStage,
   FollowUpStatus,
   MeetingSourceType,
+  MeetingStatus,
   OrderImportSource,
   OrderImportStatus,
   ReimbursementStatus,
@@ -55,9 +56,15 @@ export const REIMBURSEMENT_STATUS_LABELS: Record<ReimbursementStatus, string> = 
 };
 
 export const MEETING_SOURCE_LABELS: Record<MeetingSourceType, string> = {
-  REALTIME_AUDIO: "实时录音",
   AUDIO_UPLOAD: "音频上传",
   VIDEO_UPLOAD: "视频上传",
+};
+
+export const MEETING_STATUS_LABELS: Record<MeetingStatus, string> = {
+  PENDING: "待处理",
+  PROCESSING: "处理中",
+  COMPLETED: "已完成",
+  FAILED: "失败",
 };
 
 export const ORDER_IMPORT_SOURCE_LABELS: Record<OrderImportSource, string> = {
