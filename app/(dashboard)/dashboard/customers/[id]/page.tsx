@@ -39,10 +39,17 @@ function parseFollowUpContent(content: string) {
   }
 }
 
-export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ stageUpdated?: string }>;
+}) {
   const user = await requireCurrentUser();
   assertModuleAccess(user, "customers");
   const { id } = await params;
+  const query = await searchParams;
 
   const ownerIds = await getAccessibleOwnerIds(user);
   const customer = await prisma.customer.findFirst({
@@ -93,8 +100,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <option value="FOLLOWING">跟进中</option>
             <option value="WON">已成交</option>
           </select>
-          <button className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">修改阶段</button>
+          <button type="submit" className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">修改阶段</button>
         </form>
+        {query.stageUpdated === "1" ? <p className="mt-2 text-xs text-emerald-600">销售阶段已保存</p> : null}
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

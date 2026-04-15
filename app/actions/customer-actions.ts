@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { RoleName } from "@prisma/client";
 import { z } from "zod";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -278,4 +279,5 @@ export async function updateCustomerStageAction(formData: FormData) {
   revalidatePath(`/dashboard/customers/${customerId}`);
   revalidatePath("/dashboard/customers");
   revalidatePath("/dashboard");
+  redirect(`/dashboard/customers/${customerId}?stageUpdated=1`);
 }
