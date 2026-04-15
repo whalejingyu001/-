@@ -16,9 +16,17 @@ const customerSchema = z.object({
   wechat: z.string().optional(),
   ownerId: z.string().min(1),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+  stage: z.enum(["NEW", "CONTACTED", "FOLLOWING", "WON"]).default("NEW"),
   businessNeeds: z.array(z.enum(["海外仓", "机构"])).default([]),
   notes: z.string().optional(),
-  unitProfit: z.coerce.number().min(0),
+  unitProfit: z.preprocess(
+    (value) => {
+      if (value === "" || value == null) return 0;
+      const num = Number(value);
+      return Number.isNaN(num) ? value : num;
+    },
+    z.number().min(0),
+  ),
 });
 
 export async function createCustomerAction(formData: FormData) {
@@ -31,6 +39,7 @@ export async function createCustomerAction(formData: FormData) {
     wechat: formData.get("wechat") ?? undefined,
     ownerId: formData.get("ownerId"),
     priority: formData.get("priority"),
+    stage: formData.get("stage") ?? "NEW",
     businessNeeds: formData.getAll("businessNeeds"),
     notes: formData.get("notes") ?? undefined,
     unitProfit: formData.get("unitProfit"),
@@ -65,6 +74,7 @@ export async function createCustomerAction(formData: FormData) {
       wechat: parsed.data.wechat,
       ownerId: parsed.data.ownerId,
       priority: parsed.data.priority,
+      stage: parsed.data.stage,
       businessNeeds: parsed.data.businessNeeds.join(","),
       notes: parsed.data.notes,
       unitProfit: parsed.data.unitProfit,

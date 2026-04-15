@@ -127,8 +127,8 @@ export default async function CustomersPage({
           <input name="wechat" placeholder="微信" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <h2 className="md:col-span-3 text-sm font-semibold text-slate-900">归属与业务属性</h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <h2 className="md:col-span-4 text-sm font-semibold text-slate-900">归属与业务属性</h2>
           <select
             name="ownerId"
             defaultValue={defaultOwnerId}
@@ -152,9 +152,16 @@ export default async function CustomersPage({
             ))}
           </select>
 
-          <input name="unitProfit" type="number" step="0.01" placeholder="每单利润" className="rounded-md border border-slate-300 px-3 py-2 text-sm" required />
+          <select name="stage" defaultValue="NEW" className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option value="NEW">新客户</option>
+            <option value="CONTACTED">已联系</option>
+            <option value="FOLLOWING">跟进中</option>
+            <option value="WON">已成交</option>
+          </select>
 
-          <div className="md:col-span-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <input name="unitProfit" type="number" step="0.01" placeholder="每单利润（选填）" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+
+          <div className="md:col-span-4 rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-medium text-slate-600">业务需求（多选）</p>
             <div className="mt-2 flex gap-4 text-sm text-slate-700">
               <label className="inline-flex items-center gap-2">
