@@ -280,6 +280,8 @@ model Reimbursement {
   applicant   User                @relation("ReimbursementApplicant", fields: [applicantId], references: [id])
   amount      Decimal
   reason      String
+  attachmentName String?
+  attachmentUrl  String?
   status      ReimbursementStatus @default(PENDING)
   reviewerId  String?
   reviewer    User?               @relation("ReimbursementReviewer", fields: [reviewerId], references: [id])
