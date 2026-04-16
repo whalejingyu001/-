@@ -7,6 +7,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
+import {
+  encodeReasonWithAttachmentMeta,
+  isMissingAttachmentColumnsError,
+} from "@/lib/reimbursement-attachment";
 
 const createSchema = z.object({
   amount: z.coerce.number().positive("报销金额必须大于 0"),
@@ -40,16 +44,33 @@ export async function createReimbursementAction(formData: FormData) {
   const buffer = Buffer.from(await attachment.arrayBuffer());
   await writeFile(filePath, buffer);
 
-  await prisma.reimbursement.create({
-    data: {
-      applicantId: user.id,
-      amount: parsed.data.amount,
-      reason: parsed.data.reason,
-      attachmentName: attachment.name,
-      attachmentUrl: `/uploads/reimbursements/${savedFileName}`,
-      status: "PENDING",
-    },
-  });
+  const attachmentUrl = `/uploads/reimbursements/${savedFileName}`;
+  try {
+    await prisma.reimbursement.create({
+      data: {
+        applicantId: user.id,
+        amount: parsed.data.amount,
+        reason: parsed.data.reason,
+        attachmentName: attachment.name,
+        attachmentUrl,
+        status: "PENDING",
+      },
+    });
+  } catch (error) {
+    if (!isMissingAttachmentColumnsError(error)) {
+      throw error;
+    }
+
+    // 兼容线上尚未执行 db push 的场景：先把附件元数据写入 reason，避免功能阻塞
+    await prisma.reimbursement.create({
+      data: {
+        applicantId: user.id,
+        amount: parsed.data.amount,
+        reason: encodeReasonWithAttachmentMeta(parsed.data.reason, attachment.name, attachmentUrl),
+        status: "PENDING",
+      },
+    });
+  }
 
   revalidatePath("/dashboard/finance");
   revalidatePath("/dashboard");

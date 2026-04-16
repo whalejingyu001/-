@@ -7,6 +7,10 @@ import { REIMBURSEMENT_STATUS_LABELS } from "@/lib/enum-labels";
 import { requireCurrentUser } from "@/lib/current-user";
 import { getAccessibleOwnerIds } from "@/lib/data-scope";
 import { prisma } from "@/lib/prisma";
+import {
+  extractReasonAndAttachment,
+  isMissingAttachmentColumnsError,
+} from "@/lib/reimbursement-attachment";
 
 type FinanceSearchParams = {
   status?: "PENDING" | "APPROVED" | "REJECTED" | "";
@@ -27,6 +31,45 @@ function statusVariant(status: "PENDING" | "APPROVED" | "REJECTED") {
   if (status === "APPROVED") return "success" as const;
   if (status === "REJECTED") return "danger" as const;
   return "warning" as const;
+}
+
+async function getReimbursementsWithFallback(where: Record<string, unknown>) {
+  try {
+    const rows = await prisma.reimbursement.findMany({
+      where,
+      include: { applicant: { select: { id: true, name: true } }, reviewer: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return rows.map((row) => {
+      const parsed = extractReasonAndAttachment(row.reason, row.attachmentName, row.attachmentUrl);
+      return {
+        ...row,
+        reasonText: parsed.reasonText,
+        fileName: parsed.attachmentName,
+        fileUrl: parsed.attachmentUrl,
+      };
+    });
+  } catch (error) {
+    if (!isMissingAttachmentColumnsError(error)) {
+      throw error;
+    }
+    const rows = await prisma.reimbursement.findMany({
+      where,
+      include: { applicant: { select: { id: true, name: true } }, reviewer: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return rows.map((row) => {
+      const parsed = extractReasonAndAttachment(row.reason);
+      return {
+        ...row,
+        reasonText: parsed.reasonText,
+        fileName: parsed.attachmentName,
+        fileUrl: parsed.attachmentUrl,
+      };
+    });
+  }
 }
 
 export default async function FinancePage({
@@ -82,12 +125,7 @@ export default async function FinancePage({
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
-    prisma.reimbursement.findMany({
-      where: reimbursementWhere,
-      include: { applicant: { select: { id: true, name: true } }, reviewer: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
+    getReimbursementsWithFallback(reimbursementWhere),
     prisma.user.findMany({
       where:
         user.role === "FINANCE" || user.role === "ADMIN"
@@ -214,11 +252,11 @@ export default async function FinancePage({
                 <td className="px-4 py-3">{row.applicant.name}</td>
                 <td className="px-4 py-3">{row.createdAt.toLocaleString("zh-CN")}</td>
                 <td className="px-4 py-3">¥{Number(row.amount).toFixed(2)}</td>
-                <td className="px-4 py-3">{row.reason}</td>
+                <td className="px-4 py-3">{row.reasonText}</td>
                 <td className="px-4 py-3">
-                  {row.attachmentUrl ? (
-                    <a href={row.attachmentUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                      {row.attachmentName || "查看附件"}
+                  {row.fileUrl ? (
+                    <a href={row.fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+                      {row.fileName || "查看附件"}
                     </a>
                   ) : (
                     "-"
