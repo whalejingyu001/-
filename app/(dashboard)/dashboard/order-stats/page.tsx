@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { upsertOrderStatAction } from "@/app/actions/order-actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
 import { getAccessibleOwnerIds, ownerScope } from "@/lib/data-scope";
@@ -61,7 +62,9 @@ export default async function OrderStatsPage() {
           ))}
         </select>
         <input name="orderCount" type="number" placeholder="今日订单数" className="rounded-md border border-slate-300 px-3 py-2 text-sm" required />
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">更新单量</button>
+        <SubmitButton pendingText="提交中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+          更新单量
+        </SubmitButton>
       </form>
 
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">

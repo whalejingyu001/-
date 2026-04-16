@@ -1,4 +1,5 @@
 import { createQuoteAction } from "@/app/actions/quote-actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
 import { getAccessibleOwnerIds, ownerScope } from "@/lib/data-scope";
@@ -34,7 +35,9 @@ export default async function QuotesPage() {
         <input name="operationFee" type="number" step="0.01" placeholder="操作费" className="rounded-md border border-slate-300 px-3 py-2 text-sm" required />
         <input name="shippingFee" type="number" step="0.01" placeholder="尾程邮费" className="rounded-md border border-slate-300 px-3 py-2 text-sm" required />
         <input name="notes" placeholder="备注" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">生成新版本</button>
+        <SubmitButton pendingText="生成中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+          生成新版本
+        </SubmitButton>
       </form>
 
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">

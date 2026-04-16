@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createMeetingUploadAction } from "@/app/actions/meeting-actions";
 import { Badge } from "@/components/ui/badge";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { MEETING_SOURCE_LABELS, MEETING_STATUS_LABELS } from "@/lib/enum-labels";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -86,7 +87,9 @@ export default async function MeetingsPage({
             <p className="mt-1 text-xs text-slate-500">支持 mp3 / wav / m4a / aac / mp4 / mov，最大 300MB</p>
           </div>
           <div className="md:col-span-2 flex justify-end">
-            <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">上传并创建会议记录</button>
+            <SubmitButton pendingText="上传中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+              上传并创建会议记录
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -108,7 +111,9 @@ export default async function MeetingsPage({
               </option>
             ))}
           </select>
-          <button className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">筛选</button>
+          <SubmitButton pendingText="筛选中..." className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
+            筛选
+          </SubmitButton>
         </form>
 
         <div className="overflow-x-auto">
@@ -161,4 +166,3 @@ export default async function MeetingsPage({
     </div>
   );
 }
-

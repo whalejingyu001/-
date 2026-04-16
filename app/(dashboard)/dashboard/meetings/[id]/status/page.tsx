@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { processMeetingAction } from "@/app/actions/meeting-actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { MEETING_SOURCE_LABELS, MEETING_STATUS_LABELS } from "@/lib/enum-labels";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -95,9 +96,9 @@ export default async function MeetingStatusPage({ params }: { params: Promise<{ 
         {meeting.status !== "COMPLETED" ? (
           <form action={processMeetingAction} className="mt-4">
             <input type="hidden" name="meetingId" value={meeting.id} />
-            <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+            <SubmitButton pendingText="处理中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
               开始处理（占位流程）
-            </button>
+            </SubmitButton>
             <p className="mt-2 text-xs text-slate-500">
               第一版未接入真实 ASR/LLM，点击后会生成占位逐字稿与纪要，你可在详情页继续编辑。
             </p>

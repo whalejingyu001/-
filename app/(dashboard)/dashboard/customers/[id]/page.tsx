@@ -7,6 +7,7 @@ import {
 } from "@/app/actions/customer-actions";
 import { createQuoteAction } from "@/app/actions/quote-actions";
 import { Badge } from "@/components/ui/badge";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   CUSTOMER_PRIORITY_LABELS,
   CUSTOMER_STAGE_LABELS,
@@ -100,7 +101,9 @@ export default async function CustomerDetailPage({
             <option value="FOLLOWING">跟进中</option>
             <option value="WON">已成交</option>
           </select>
-          <button type="submit" className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">修改阶段</button>
+          <SubmitButton pendingText="保存中..." className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
+            修改阶段
+          </SubmitButton>
         </form>
         {query.stageUpdated === "1" ? <p className="mt-2 text-xs text-emerald-600">销售阶段已保存</p> : null}
       </section>
@@ -113,7 +116,9 @@ export default async function CustomerDetailPage({
         <form action={updateCustomerTagsAction} className="flex gap-3">
           <input type="hidden" name="customerId" value={customer.id} />
           <input name="tags" defaultValue={customer.tags} placeholder="使用逗号分隔标签，如：重点客户,跨境" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          <button className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">保存标签</button>
+          <SubmitButton pendingText="保存中..." className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
+            保存标签
+          </SubmitButton>
         </form>
       </section>
 
@@ -134,7 +139,9 @@ export default async function CustomerDetailPage({
             required
           />
           <div className="md:col-span-3 flex justify-end">
-            <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">新增跟进</button>
+            <SubmitButton pendingText="提交中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+              新增跟进
+            </SubmitButton>
           </div>
         </form>
         <div className="space-y-2 text-sm">
@@ -168,7 +175,9 @@ export default async function CustomerDetailPage({
                     required
                   />
                   <div className="md:col-span-3 flex justify-end">
-                    <button className="rounded-md bg-amber-600 px-4 py-2 text-sm text-white">提交结果并完成</button>
+                    <SubmitButton pendingText="提交中..." className="rounded-md bg-amber-600 px-4 py-2 text-sm text-white">
+                      提交结果并完成
+                    </SubmitButton>
                   </div>
                 </form>
               ) : null}
@@ -212,7 +221,9 @@ export default async function CustomerDetailPage({
                 <input name="finalMileFee" type="number" step="0.01" placeholder="尾程运费" className="rounded-md border border-slate-300 px-3 py-2" required />
                 <input name="notes" placeholder="备注" className="rounded-md border border-slate-300 px-3 py-2" />
                 <input name="attachment" type="file" className="rounded-md border border-slate-300 px-3 py-2" />
-                <button className="rounded-md bg-slate-900 px-3 py-2 text-white">保存报价</button>
+                <SubmitButton pendingText="保存中..." className="rounded-md bg-slate-900 px-3 py-2 text-white">
+                  保存报价
+                </SubmitButton>
               </form>
             </details>
           </div>

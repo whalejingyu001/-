@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CustomerPriority, CustomerStage, RoleName } from "@prisma/client";
 import { createCustomerAction } from "@/app/actions/customer-actions";
 import { Badge } from "@/components/ui/badge";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { assertModuleAccess } from "@/lib/rbac";
 import { CUSTOMER_PRIORITY_LABELS, CUSTOMER_STAGE_LABELS } from "@/lib/enum-labels";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -182,7 +183,9 @@ export default async function CustomersPage({
         </div>
 
         <div className="flex justify-end">
-          <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">保存客户</button>
+          <SubmitButton pendingText="保存中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+            保存客户
+          </SubmitButton>
         </div>
       </form>
 
@@ -224,9 +227,9 @@ export default async function CustomersPage({
             <Link href="/dashboard/customers" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
               重置
             </Link>
-            <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+            <SubmitButton pendingText="筛选中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
               筛选
-            </button>
+            </SubmitButton>
           </div>
         </form>
         <table className="min-w-full divide-y divide-slate-200 text-sm">

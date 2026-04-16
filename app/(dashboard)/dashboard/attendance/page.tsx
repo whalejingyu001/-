@@ -1,6 +1,7 @@
 import { AttendanceType } from "@prisma/client";
 import { assertModuleAccess } from "@/lib/rbac";
 import { ATTENDANCE_STATUS_LABELS, ATTENDANCE_TYPE_LABELS } from "@/lib/enum-labels";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
@@ -87,7 +88,9 @@ export default async function AttendanceDashboardPage({
             <option value="FIELD_WORK">外勤打卡</option>
           </select>
 
-          <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">筛选</button>
+          <SubmitButton pendingText="筛选中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+            筛选
+          </SubmitButton>
         </form>
 
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">

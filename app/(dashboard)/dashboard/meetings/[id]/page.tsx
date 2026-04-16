@@ -6,6 +6,7 @@ import {
   updateMeetingTranscriptAction,
 } from "@/app/actions/meeting-actions";
 import { Badge } from "@/components/ui/badge";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { MEETING_SOURCE_LABELS, MEETING_STATUS_LABELS } from "@/lib/enum-labels";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -102,7 +103,9 @@ export default async function MeetingDetailPage({ params }: { params: Promise<{ 
           </select>
           <textarea name="notes" defaultValue={meeting.notes ?? ""} placeholder="备注" className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
           <div className="md:col-span-2 flex justify-end">
-            <button className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">保存基本信息</button>
+            <SubmitButton pendingText="保存中..." className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
+              保存基本信息
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -148,7 +151,9 @@ export default async function MeetingDetailPage({ params }: { params: Promise<{ 
             placeholder="转写内容"
           />
           <div className="flex justify-end">
-            <button className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">保存逐字稿</button>
+            <SubmitButton pendingText="保存中..." className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
+              保存逐字稿
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -182,7 +187,9 @@ export default async function MeetingDetailPage({ params }: { params: Promise<{ 
             className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
           <div className="flex justify-end">
-            <button className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">保存会议纪要</button>
+            <SubmitButton pendingText="保存中..." className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700">
+              保存会议纪要
+            </SubmitButton>
           </div>
         </form>
       </section>

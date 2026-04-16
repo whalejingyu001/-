@@ -1,4 +1,5 @@
 import { checkoutAction } from "@/app/actions/attendance-actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { assertModuleAccess } from "@/lib/rbac";
 import { requireCurrentUser } from "@/lib/current-user";
 import { getAccessibleOwnerIds, ownerScope } from "@/lib/data-scope";
@@ -41,7 +42,9 @@ export default async function SupervisionPage() {
       </div>
 
       <form action={checkoutAction} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">下班打卡检查</button>
+        <SubmitButton pendingText="检查中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+          下班打卡检查
+        </SubmitButton>
       </form>
     </div>
   );

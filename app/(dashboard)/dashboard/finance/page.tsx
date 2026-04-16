@@ -2,6 +2,7 @@ import { startOfMonth, startOfWeek } from "date-fns";
 import { createReimbursementAction, reviewReimbursementAction } from "@/app/actions/reimbursement-actions";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/ui/stat-card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { assertModuleAccess } from "@/lib/rbac";
 import { REIMBURSEMENT_STATUS_LABELS } from "@/lib/enum-labels";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -179,7 +180,9 @@ export default async function FinancePage({
             required
           />
           <p className="text-xs text-slate-500">交易记录附件（必填），建议上传发票/付款凭证，单文件不超过 20MB</p>
-          <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">提交申请</button>
+          <SubmitButton pendingText="提交中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+            提交申请
+          </SubmitButton>
         </form>
 
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -191,7 +194,9 @@ export default async function FinancePage({
               placeholder="按客户名筛选报价"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
-            <button className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">筛选</button>
+            <SubmitButton pendingText="筛选中..." className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
+              筛选
+            </SubmitButton>
           </form>
           <div className="space-y-2 text-sm">
             {quotes.map((quote) => (
@@ -226,7 +231,9 @@ export default async function FinancePage({
           <input name="dateFrom" type="date" defaultValue={params.dateFrom ?? ""} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm" />
           <input name="dateTo" type="date" defaultValue={params.dateTo ?? ""} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm" />
           <div className="flex gap-2">
-            <button className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">筛选</button>
+            <SubmitButton pendingText="筛选中..." className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+              筛选
+            </SubmitButton>
             <a href="/dashboard/finance" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-sm text-slate-700">
               重置
             </a>
@@ -276,12 +283,22 @@ export default async function FinancePage({
                         className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
                       />
                       <div className="flex gap-2">
-                        <button name="status" value="APPROVED" className="rounded border border-emerald-300 px-2 py-1 text-xs text-emerald-700">
+                        <SubmitButton
+                          name="status"
+                          value="APPROVED"
+                          pendingText="处理中..."
+                          className="rounded border border-emerald-300 px-2 py-1 text-xs text-emerald-700"
+                        >
                           通过
-                        </button>
-                        <button name="status" value="REJECTED" className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-700">
+                        </SubmitButton>
+                        <SubmitButton
+                          name="status"
+                          value="REJECTED"
+                          pendingText="处理中..."
+                          className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-700"
+                        >
                           驳回
-                        </button>
+                        </SubmitButton>
                       </div>
                     </form>
                   ) : (

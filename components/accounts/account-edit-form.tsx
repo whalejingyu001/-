@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RoleName, UserStatus } from "@prisma/client";
 import { resetPasswordAction, updateAccountAction } from "@/app/actions/account-actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { USER_STATUS_LABELS } from "@/lib/enum-labels";
 
 type RoleOption = {
@@ -100,7 +101,9 @@ export function AccountEditForm({
             <option value="DISABLED">{USER_STATUS_LABELS.DISABLED}</option>
           </select>
         </div>
-        <button className="md:col-span-2 rounded-md bg-slate-900 px-4 py-2 text-sm text-white">保存修改</button>
+        <SubmitButton pendingText="保存中..." className="md:col-span-2 rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+          保存修改
+        </SubmitButton>
       </form>
 
       <form
@@ -122,10 +125,11 @@ export function AccountEditForm({
               required
             />
           </div>
-          <button className="rounded-md border border-amber-300 px-4 py-2 text-sm text-amber-700">重置密码</button>
+          <SubmitButton pendingText="重置中..." className="rounded-md border border-amber-300 px-4 py-2 text-sm text-amber-700">
+            重置密码
+          </SubmitButton>
         </div>
       </form>
     </>
   );
 }
-

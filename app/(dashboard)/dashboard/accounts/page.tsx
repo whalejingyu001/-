@@ -3,6 +3,7 @@ import { RoleName, UserStatus } from "@prisma/client";
 import { createAccountAction } from "@/app/actions/account-actions";
 import { AccountRowActions } from "@/components/accounts/account-row-actions";
 import { Badge } from "@/components/ui/badge";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { requireCurrentUser } from "@/lib/current-user";
 import { assertModuleAccess } from "@/lib/rbac";
 import { assertAdmin } from "@/lib/admin-guard";
@@ -104,7 +105,9 @@ export default async function AccountsPage({
           <p className="text-xs text-slate-500">{ROLE_HELPERS[roleForCreate]}</p>
         </div>
         <input name="teamName" placeholder="所属团队/部门（可选）" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">新建账号</button>
+        <SubmitButton pendingText="创建中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+          新建账号
+        </SubmitButton>
         <div className="md:col-span-6 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
           <p>销售：负责客户、跟进、报价、单量</p>
           <p>销售主管：查看团队数据</p>
@@ -149,7 +152,9 @@ export default async function AccountsPage({
             <option value="10">10/页</option>
             <option value="20">20/页</option>
           </select>
-          <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">筛选</button>
+          <SubmitButton pendingText="筛选中..." className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">
+            筛选
+          </SubmitButton>
         </div>
       </form>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { resetPasswordAction, toggleAccountStatusAction } from "@/app/actions/account-actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type Props = {
   userId: string;
@@ -26,9 +27,13 @@ export function AccountRowActions({ userId, status, isSelf }: Props) {
       >
         <input type="hidden" name="id" value={userId} />
         <input type="hidden" name="status" value={nextStatus} />
-        <button className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700" disabled={isSelf && status === "ACTIVE"}>
+        <SubmitButton
+          pendingText="处理中..."
+          className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700"
+          disabled={isSelf && status === "ACTIVE"}
+        >
           {status === "ACTIVE" ? "停用" : "启用"}
-        </button>
+        </SubmitButton>
       </form>
       <form
         action={resetPasswordAction}
@@ -39,9 +44,10 @@ export function AccountRowActions({ userId, status, isSelf }: Props) {
       >
         <input type="hidden" name="id" value={userId} />
         <input type="hidden" name="newPassword" value="123456" />
-        <button className="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700">重置密码</button>
+        <SubmitButton pendingText="重置中..." className="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700">
+          重置密码
+        </SubmitButton>
       </form>
     </div>
   );
 }
-
